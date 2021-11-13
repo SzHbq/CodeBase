@@ -64,3 +64,4 @@ public class OnCamera : MonoBehaviour
         return Mathf.Clamp(angle, min, max);
     }
 }
+
