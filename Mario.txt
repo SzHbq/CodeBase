@@ -1,0 +1,221 @@
+PlayerControl
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class PlayerControl : MonoBehaviour
+{
+    //现在的Mario与柱子碰撞会一直抖动
+
+    public int Hp = 1;
+    private Animator ani;
+    private bool isGround;
+    private Rigidbody2D rbody;
+    void Start()
+    {
+        ani = GetComponent<Animator>();
+        rbody = GetComponent<Rigidbody2D>();
+    }
+    /*
+    void Update()
+    {
+        float horizontal = Input.GetAxis("Horizontal");
+
+        if (horizontal != 0)
+        {
+            //move
+            ani.SetBool("IsRun", true);
+            //turn
+            transform.localScale = new Vector3(horizontal > 0 ? 1f : -1f, 1f, 1f);
+            //move
+            transform.Translate(Vector2.right * horizontal * 8f * Time.deltaTime);
+            /*
+             * 教程原版
+             * transform.Translate(transform.right*1f*Time.deltaTime*horizontal)
+             * if(horizontal>0)
+             * {
+             *      GetComponent<SpriteRenderer>().flipX=false;
+             * }
+             * if(horizontal<0)
+             * {
+             *      GetComponent<SpriteRenderer>().flipX=true;
+             * }
+             * 
+             */
+
+            /*关于Mario与柱子碰撞会一直抖动
+             * 
+             * 
+             * 
+             * 
+             * 
+             * 
+             * 
+             * 
+             
+        }
+        else
+        {
+            //stand
+            ani.SetBool("IsRun", false);
+        }
+
+        if (Input.GetKeyDown(KeyCode.Space) && isGround == true)
+        {
+            rbody.AddForce(Vector2.up * 400);
+            //jump sound
+            AudioManager.Instance.PlaySound("跳");
+        }
+    }
+
+        */
+
+    void FixedUpdate()
+    {
+        float horizontal = Input.GetAxis("Horizontal");
+
+        if (horizontal != 0)
+        {
+            //move
+            ani.SetBool("IsRun", true);
+            //turn
+            transform.localScale = new Vector3(horizontal > 0 ? 1f : -1f, 1f, 1f);
+            //move
+            transform.Translate(Vector2.right * horizontal * 8f * Time.deltaTime);
+        }
+    
+        else
+        {
+            //stand
+            ani.SetBool("IsRun", false);
+        }
+
+if (Input.GetKeyDown(KeyCode.Space) && isGround == true)
+{
+    rbody.AddForce(Vector2.up * 400);
+    //jump sound
+    AudioManager.Instance.PlaySound("跳");
+}
+    }
+
+
+
+
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        //yes,isGround
+        if (collision.collider.tag == "Ground")
+        {
+            isGround = true;
+            ani.SetBool("IsJump", false);
+        }
+    }
+
+    private void OnCollisionExit2D(Collision2D collision)
+    {
+        //no,leaveGround
+        if (collision.collider.tag == "Ground")
+        {
+            isGround = false;
+            ani.SetBool("IsJump", true);
+        }
+
+    }
+}
+
+___________________________________________________________________________________________________________________________________
+
+CameraControl
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class CameraControl : MonoBehaviour
+{
+    //follow target
+    public Transform target;
+    //edge
+    public float MinX;
+    public float MaxX;
+    void Start()
+    {
+        
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        //get camera position
+        Vector3 v3 = transform.position;
+        //update camera x position
+        v3.x = target.position.x;
+        //edge 判断
+        if (v3.x>MaxX)
+        {
+            v3.x = MaxX;
+        }
+        if (v3.x < MinX)
+        {
+            v3.x = MinX;
+        }
+        //再赋回去
+        transform.position = v3;
+    }
+
+    
+}
+
+
+___________________________________________________________________________________________________________________________________
+
+AudioManager
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class AudioManager : MonoBehaviour
+{
+    //单例类
+    public static AudioManager Instance;
+
+    public AudioSource MusicPlayer;
+    public AudioSource SoundPlayer;
+
+    void Start()
+    {
+        Instance = this;
+    }
+
+    //play sound
+    public void PlayMusic(string name)
+    {
+        //如果当前音乐播放器没有播放
+        if (MusicPlayer.isPlaying == false)
+        {
+            //播放
+
+            //加载音频文件
+            AudioClip clip = Resources.Load<AudioClip>(name);
+            //同时只能播放一个clip
+            MusicPlayer.clip = clip;
+            MusicPlayer.Play();
+        }
+    }
+
+    //停止播放音乐
+    public void StopMusic()
+    {
+        MusicPlayer.Stop();
+    }
+
+    //播放音效
+    public void PlaySound(string name)
+    {
+        AudioClip clip = Resources.Load<AudioClip>(name);
+        //可以同时播放多个音效
+        SoundPlayer.PlayOneShot(clip);
+    }
+}
