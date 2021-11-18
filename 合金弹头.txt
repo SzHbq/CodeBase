@@ -1,0 +1,253 @@
+Player Control
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class PlayerControl : MonoBehaviour
+{
+    //bullet_prefab
+    public GameObject BulletPre;
+    //FirePoint
+    public Transform FirePoint;
+    //fire_timer
+    private float timer = 0;
+    //animation_control
+    private Animator ani;
+    //rigidbody
+    private Rigidbody2D rbody;
+    //isGround?
+    private bool isGround;
+
+    void Start()
+    {
+        ani = GetComponent<Animator>();
+        rbody = GetComponent<Rigidbody2D>();
+    }
+
+    void Update()
+    {
+        float horizontal = Input.GetAxis("Horizontal");
+        //direction & move
+        if(horizontal!=0)
+        {
+            //move
+            ani.SetBool("IsRun", true);
+            //turn
+            transform.localScale = new Vector3(horizontal > 0 ? -0.5f : 0.5f, 0.5f, 0.5f);
+            //move
+            transform.Translate(Vector2.right * horizontal * 1 * Time.deltaTime);
+        }
+        else
+        {
+            //stand
+            ani.SetBool("IsRun", false);
+        }
+        //jump
+        if (Input.GetKeyDown(KeyCode.Space) && isGround == true)
+        {
+            rbody.AddForce(Vector2.up * 150);
+        }
+
+        //attack
+        timer += Time.deltaTime;
+        if (Input.GetKeyDown(KeyCode.F) && timer > 0.5f)
+        {
+            timer = 0;
+            //attack_animation
+            ani.SetTrigger("Attack");
+            AudioManager.Instance.PlaySound("shoot");
+            //create bullet(最后乘-1是因为player是反的）
+
+            Instantiate(BulletPre, FirePoint.position, FirePoint.rotation).GetComponent<BulletControl>().dir = transform.localScale.x * -1;
+        }
+    }
+
+    //isGround?
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        //yes,isGround
+        if (collision.collider.tag == "Ground")
+        {
+            isGround = true;
+            //End_jump_animation
+            ani.SetBool("IsJump", false);
+
+        }
+    }
+
+    private void OnCollisionExit2D(Collision2D collision)
+    {
+        //no,leaveGround
+        if (collision.collider.tag == "Ground")
+        {
+            isGround = false;
+            //Begin_jump_animation
+            ani.SetBool("IsJump", true);
+
+        }
+
+    }
+
+
+}
+
+---------------------------------------------------------------------------------------------------------------------------------
+
+Enemy Control
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class EnemyControl : MonoBehaviour
+{
+    //hp
+    public int hp = 1;
+    //animation_control
+    private Animator ani;
+    //已经显示
+    private bool showEnd = false;
+    //get_player_information
+    private PlayerControl player;
+    //定时器
+    private float timer = 0;
+
+    void Start()
+    {
+        ani = GetComponent<Animator>();
+        player = GameObject.FindWithTag("Player").GetComponent<PlayerControl>();
+    }
+
+    void Update()
+    {
+        if (hp <= 0)
+        {
+            return;
+        }
+
+        //与player距离
+        float dis = Vector3.Distance(player.transform.position, transform.position);
+        //定时器
+        timer += Time.deltaTime;
+
+        if (dis < 0.5f)
+        {
+            //attack
+            ani.SetBool("IsRun", false);
+            //定时器,使enemy不高速攻击
+            if (timer > 3)
+            {
+                timer = 0;
+                ani.SetTrigger("Attack");
+            }
+        }
+        else if(dis < 2f)
+        {
+            //show
+            if (showEnd == false)
+            {
+                ani.SetTrigger("Show");
+            }
+            else
+            {
+                //追击
+                ani.SetBool("IsRun", true);
+                transform.Translate(Vector2.left * 0.3f * Time.deltaTime);
+            }
+        }
+        else
+        {
+            if (showEnd)
+            {
+                //追击(大于2f也追击）
+                ani.SetBool("IsRun", true);
+                transform.Translate(Vector2.left * 0.3f * Time.deltaTime);
+            }
+        }
+        
+    }
+
+    //显示完成
+    //在 动画 最后第2帧添加一个动画事件，ShowEnd()，代表showEnd = true;
+    public void ShowEnd()
+    {
+        showEnd = true;
+    }
+
+    //collision bullet
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        if(collision.collider.tag=="bullet")
+        {
+            hp--;
+            if(hp<=0)
+            {
+                //die
+                Destroy(GetComponent<Rigidbody2D>());
+                Destroy(GetComponent<CapsuleCollider2D>());
+                Destroy(gameObject, 3f);
+                ani.SetTrigger("Die");
+            }
+        }
+    }
+}
+
+
+---------------------------------------------------------------------------------------------------------------------------------
+
+Bullet Control
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class BulletControl : MonoBehaviour
+{
+    //方向
+    public float dir = 1;
+    void Start()
+    {
+        Destroy(gameObject, 3f);
+    }
+
+    void Update()
+    {
+        //move
+        transform.Translate(transform.right * 3 * Time.deltaTime * (dir > 0 ? 1 : -1));
+    }
+}
+
+
+---------------------------------------------------------------------------------------------------------------------------------
+
+Audio Manager
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class AudioManager : MonoBehaviour
+{
+    public static AudioManager Instance;
+
+    private AudioSource player;
+
+
+    void Start()
+    {
+        //自己就是AudioManager
+        Instance = this;
+        //get_sound_component
+        player = GetComponent<AudioSource>();
+    }
+
+    public void PlaySound(string name)
+    {
+        AudioClip clip = Resources.Load<AudioClip>(name);
+        player.PlayOneShot(clip);
+    }
+    
+}
+
+

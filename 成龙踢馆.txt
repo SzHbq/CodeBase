@@ -1,0 +1,119 @@
+PlayerControl
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class PlayerControl : MonoBehaviour
+{
+    public float Hp = 100;
+    //attack region
+    public Collider2D AttackTrigger;
+
+    //animation
+    private Animator ani;
+    //IsGround
+    private bool isGround;
+    void Start()
+    {
+        ani = GetComponent<Animator>();
+    }
+
+    void Update()
+    {
+        if(Hp<=0)
+        {
+            return;
+        }
+        //move
+        float horizontal = Input.GetAxis("Horizontal");
+        if(horizontal != 0)
+        {
+            //turn
+            transform.localScale = new Vector3(horizontal > 0 ? 1 : -1, 1, 1);
+            //move
+            transform.Translate(Vector2.right * horizontal * 1 * Time.deltaTime);
+            //animation
+            ani.SetBool("IsRun", true);
+        }
+        else
+        {
+            ani.SetBool("IsRun", false);
+        }
+
+        //jump
+        if(Input.GetKeyDown(KeyCode.Space)&&isGround)
+        {
+            //up_force
+            //update中最好不要用GetComponent，费资源
+            GetComponent<Rigidbody2D>().AddForce(Vector2.up * 150);
+        }
+
+        //attack
+        if(Input.GetKeyDown(KeyCode.U)&&horizontal==0&&isGround)
+        {
+            ani.SetTrigger("Attack");
+            AudioManager.Instance.PlaySound("attack");
+        }
+
+        //kick
+        if (Input.GetKeyDown(KeyCode.I) && horizontal == 0 && isGround)
+        {
+            ani.SetTrigger("Kick");
+            AudioManager.Instance.PlaySound("kick");
+        }
+
+    }
+
+    //碰撞
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        if(collision.collider.tag=="Ground")
+        {
+            isGround = true;
+            ani.SetBool("IsJump", false);
+        }
+    }
+
+    //end碰撞
+
+    private void OnCollisionExit2D(Collision2D collision)
+    {
+        if (collision.collider.tag == "Ground")
+        {
+            isGround = false;
+            //jump_animation,因为离开地面时就是跳跃
+            ani.SetBool("IsJump", true);
+        }
+    }
+
+}
+---------------------------------------------------------------------------------------------------------------------------------
+AudioManager
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class AudioManager : MonoBehaviour
+{
+    public static AudioManager Instance;
+
+    private AudioSource player;
+    void Start()
+    {
+        Instance = this;
+        player = GetComponent<AudioSource>();
+    }
+
+    //PlaySound
+    public void PlaySound(string name)
+    {
+        //get sound clip by sound name
+        AudioClip clip = Resources.Load<AudioClip>(name);
+        //PlaySound
+        player.PlayOneShot(clip);
+    }
+}
+
+---------------------------------------------------------------------------------------------------------------------------------

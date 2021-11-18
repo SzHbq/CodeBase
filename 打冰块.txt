@@ -1,0 +1,170 @@
+PlayerControl
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class PlayerControl : MonoBehaviour
+{
+    //攻击判定区域
+    public Collider2D AttackTrigger;
+
+    private Animator ani;
+    private IsGround isGround;
+
+    void Start()
+    {
+        ani = GetComponent<Animator>();
+        isGround = GetComponentInChildren<IsGround>();
+    }
+
+    void Update()
+    {
+        //move
+        float horizontal = Input.GetAxis("Horizontal");
+        if(horizontal != 0)
+        {
+            //方向
+            //这里用localScale，可以把player的攻击范围一并转过来。用Flip，只是player的图片。
+            transform.localScale = new Vector3(horizontal > 0 ? 1 : -1, 1, 1);
+            //move
+            transform.Translate(Vector2.right * horizontal * Time.deltaTime);
+            //animation
+            ani.SetBool("IsRun", true);
+        }
+        else
+        {
+            ani.SetBool("IsRun", false);
+        }
+        //jump
+        if(Input.GetKeyDown(KeyCode.Space)&&isGround.isGround)
+        {
+            //force
+            GetComponent<Rigidbody2D>().AddForce(Vector2.up * 100);
+            //sound
+            AudioManager.Instance.PlaySound("jump");
+        }
+        //jump_animation
+        if (isGround.isGround)
+        {
+            ani.SetBool("IsJump", false);
+            //攻击范围enabled = false
+            AttackTrigger.enabled = false;
+        }
+        else
+        {
+            ani.SetBool("IsJump", true);
+            AttackTrigger.enabled = true;
+        }
+        //attack
+        if(Input.GetKeyDown(KeyCode.F))
+        {
+            ani.SetTrigger("Attack");
+        }
+
+    }
+
+    //begin_attack
+    public void Attack()
+    {
+        AttackTrigger.enabled = true;
+    }
+    //end_attack
+    public void AttackEnd()
+    {
+        AttackTrigger.enabled = false;
+    }
+
+    //die
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        if(collision.collider.tag == "Enemy")
+        {
+            Destroy(GetComponent<Collider2D>());
+            GetComponent<Rigidbody2D>().AddForce(Vector2.up * 150);
+            ani.SetTrigger("Die");
+            AudioManager.Instance.PlaySound("dead");
+        }
+    }
+}
+
+
+---------------------------------------------------------------------------------------------------------------------------------
+
+IsGround 
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class IsGround : MonoBehaviour
+{
+    public bool isGround = false;
+    //定义一个数组List，为了检测是否与地面相接。如果地面很复杂，不用这个可能会出BUG。
+    private List<Collider2D> list = new List<Collider2D>();
+
+    void Start()
+    {
+        
+    }
+
+    
+    void Update()
+    {
+        //list.Count>0代表与地面相接。
+        if (list.Count>0)
+        {
+            isGround = true;
+        }
+        else
+        {
+            isGround = false;
+        }
+    }
+
+    
+
+    private void OnTriggerEnter2D(Collider2D collision)
+    {
+        if (collision.tag == "Ground")
+        {
+            list.Add(collision);
+        }
+    }
+    private void OnTriggerExit2D(Collider2D collision)
+    {
+        if (collision.tag == "Ground")
+        {
+            list.Remove(collision);
+        }
+    }
+  
+}
+
+
+
+---------------------------------------------------------------------------------------------------------------------------------
+
+AudioManager
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class AudioManager : MonoBehaviour
+{
+    public static AudioManager Instance;
+
+    private AudioSource player;
+    void Start()
+    {
+        Instance = this;
+        player = GetComponent<AudioSource>();
+    }
+
+    public void PlaySound(string name)
+    {
+        AudioClip clip = Resources.Load<AudioClip>(name);
+        player.PlayOneShot(clip);
+    }
+}
